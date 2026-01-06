@@ -1,0 +1,240 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+
+%% ================================
+%% Personal Center Module
+%% ================================
+namespace PersonalCenterModule {
+
+    %% Interface exposed to other modules (AI Interview, Recommendation)
+    class UserProfile {
+        +getUserId() String
+        +getBasicInfo() BasicInfo
+        +getAcademicRecords() List~CourseRecord~
+        +getSkillTags() List~SkillTag~
+        +getKnowledgeGraph() KnowledgeGraph
+        +getStaticFeatures() Map~String, Object~
+    }
+
+    %% REST/HTTP controller for user-facing actions
+    class PersonalCenterController {
+        %% View user profile including academic, skills, and knowledge graph
+        +viewProfile(userId: String) UserProfile
+        %% Update editable fields such as nickname, tags, etc.
+        +updateProfile(userId: String, updates: ProfileUpdate) Boolean
+        %% Manually refresh academic data from external systems
+        +refreshAcademicData(userId: String) Boolean
+    }
+
+    %% Core business logic layer
+    class ProfileService {
+        -profileRepository: ProfileRepository
+        -externalDataService: ExternalDataService
+        -knowledgeGraphService: KnowledgeGraphService
+        -featureService: UserFeatureService
+        %% Build the full user profile object
+        +getUserProfile(userId: String) UserProfile
+        %% Update skill tags (manual or generated)
+        +updateUserSkills(userId: String, skills: List~SkillTag~) Boolean
+        %% Pull latest data from external Tongji API
+        +refreshFromExternal(userId: String) Boolean
+        %% Used by Recommendation Service
+        +getStaticFeatures(userId: String) Map~String, Object~
+        %% Based on behavior tracking
+        +getDynamicFeatures(userId: String) Map~String, Object~
+    }
+
+    %% Used by Recommendation system
+    class UserFeatureService {
+        -featureCache: Map~String, FeatureVector~
+        -behaviorTracker: UserBehaviorTracker
+        %% Precomputed stable attributes based on profile and academic info
+        +computeStaticFeatures(userProfile: UserProfileEntity) Map~String, Object~
+        %% Dynamic attributes based on recent behaviors
+        +computeDynamicFeatures(userId: String) Map~String, Object~
+        %% Refresh static feature cache
+        +updateStaticFeatureCache(userId: String)
+    }
+
+    %% Tracks browsing and clicking behaviors
+    class UserBehaviorTracker {
+        -userBehaviors: Map~String, List~UserBehavior~~
+        %% Record project view actions
+        +recordViewProject(userId: String, projectId: String, projectType: String)
+        %% Record competition clicks
+        +recordClickCompetition(userId: String, competitionId: String)
+        %% Retrieve recent actions for dynamic recommendation
+        +getRecentBehaviors(userId: String, hours: Int) List~UserBehavior~
+    }
+
+    %% Persistence layer for user profile
+    class ProfileRepository {
+        +findById(userId: String) UserProfileEntity
+        +save(profile: UserProfileEntity) Boolean
+        +updateSkills(userId: String, skills: List~SkillTag~) Boolean
+    }
+
+    %% Generates skills & knowledge graph from academic records
+    class KnowledgeGraphService {
+        %% Extract skills from course records
+        +extractSkillTags(courses: List~CourseRecord~) List~SkillTag~
+        %% Build graph (skills, relationships, categories)
+        +buildKnowledgeGraph(skills: List~SkillTag~) KnowledgeGraph
+    }
+
+    %% Interacts with Tongji external APIs
+    class ExternalDataService {
+        -tongjiApiClient: TongjiApiClient
+        -dataConverter: DataConverter
+        %% Synchronize all user external data and merge with DB profile
+        +syncUserData(userId: String) UserProfileEntity
+        %% Pull academic history from Tongji API
+        +fetchAcademicRecords(userId: String) List~CourseRecordDTO~
+        %% Pull basic student info
+        +fetchStudentInfo(userId: String) BasicInfoDTO~
+        %% Pull research project experience
+        +fetchResearchProjects(userId: String) List~ResearchProjectDTO~
+        %% Pull competition history
+        +fetchCompetitionHistory(userId: String) List~CompetitionRecordDTO~
+    }
+
+    %% Converts DTO from external systems into internal domain entities
+    class DataConverter {
+        +convertCourseRecord(dto: CourseRecordDTO) CourseRecord
+        +convertResearchProject(dto: ResearchProjectDTO) ResearchProject
+        +convertCompetitionRecord(dto: CompetitionRecordDTO) CompetitionRecord
+        +convertBasicInfo(dto: BasicInfoDTO) BasicInfo
+    }
+
+    %% Database entity storing the entire user profile
+    class UserProfileEntity {
+        -userId: String
+        -basicInfo: BasicInfo
+        -academicRecords: List~CourseRecord~
+        -skillTags: List~SkillTag~
+        -knowledgeGraph: KnowledgeGraph
+        -researchProjects: List~ResearchProject~
+        -competitionHistory: List~CompetitionRecord~
+        -lastUpdated: Date
+        %% Convert to interface model for external modules
+        +toUserProfile() UserProfile
+    }
+
+    %% Basic student info synced from Tongji API
+    class BasicInfo {
+        -name: String
+        -studentId: String
+        -major: String
+        -grade: String
+        -department: String
+    }
+
+    %% Academic course record
+    class CourseRecord {
+        -courseCode: String
+        -courseName: String
+        -credit: Double
+        -score: Double
+        -semester: String
+    }
+
+    %% Extracted skill tag (source = course, project, manual)
+    class SkillTag {
+        -skillName: String
+        -proficiency: Double
+        -source: String
+    }
+
+    %% Research project experience
+    class ResearchProject {
+        -projectId: String
+        -projectName: String
+        -projectType: String
+        -role: String
+        -duration: String
+        -skills: List~String~
+    }
+
+    %% Competition experience
+    class CompetitionRecord {
+        -competitionId: String
+        -competitionName: String
+        -level: String
+        -award: String
+        -year: String
+    }
+
+    %% User skill knowledge graph
+    class KnowledgeGraph {
+        -skills: Map~String, Double~
+        -categories: Map~String, List~String~~
+    }
+
+}
+
+%% ================================
+%% External Tongji University APIs
+%% ================================
+namespace ExternalSystems {
+    class TongjiApiClient {
+        %% Fetch official student data
+        +getStudentInfo(studentId: String) BasicInfoDTO
+        +getCourseRecords(studentId: String) List~CourseRecordDTO~
+        +getResearchProjects(studentId: String) List~ResearchProjectDTO~
+        +getCompetitionHistory(studentId: String) List~CompetitionRecordDTO~
+    }
+}
+
+%% ================================
+%% Recommendation Service
+%% ================================
+namespace RecommendationService {
+    class RecommendationClient {
+        %% Request precomputed static & dynamic features
+        +getStaticFeatures(userId: String) Map~String, Object~
+        +getDynamicFeatures(userId: String) Map~String, Object~
+    }
+}
+
+%% ================================
+%% AI Interview Service
+%% ================================
+namespace AIInterviewService {
+    class AIInterviewClient {
+        %% Fetch user profile to generate interview questions
+        +getUserProfile(userId: String) UserProfile
+    }
+}
+
+<<interface>> UserProfile
+
+%% ================================
+%% Relationships
+%% ================================
+PersonalCenterController --> ProfileService
+ProfileService --> ProfileRepository
+ProfileService --> ExternalDataService
+ProfileService --> KnowledgeGraphService
+ProfileService --> UserFeatureService
+ProfileRepository --> UserProfileEntity
+ExternalDataService --> TongjiApiClient
+ExternalDataService --> DataConverter
+ExternalDataService --> UserProfileEntity
+UserFeatureService --> UserProfileEntity
+UserFeatureService --> UserBehaviorTracker
+ProfileService ..> RecommendationClient : provide features
+ProfileService ..> AIInterviewClient : provide profile
+UserProfileEntity ..|> UserProfile
+UserProfileEntity *-- BasicInfo
+UserProfileEntity *-- "0..*" CourseRecord
+UserProfileEntity *-- "0..*" SkillTag
+UserProfileEntity *-- "0..*" ResearchProject
+UserProfileEntity *-- "0..*" CompetitionRecord
+UserProfileEntity *-- KnowledgeGraph
+ProfileService --> UserProfileEntity : updateProfileGraph()
+KnowledgeGraphService --> SkillTag : produces
+KnowledgeGraphService --> KnowledgeGraph : produces

@@ -1,0 +1,123 @@
+@startuml
+skinparam actor {
+  BackgroundColor #E1F5FF
+  BorderColor #0066CC
+}
+skinparam usecase {
+  BackgroundColor #FFF8E6
+  BorderColor #FF9900
+}
+skinparam package {
+  BackgroundColor #F7F7F7
+  BorderColor #555555
+}
+
+left to right direction
+
+'=====================
+' Actors
+'=====================
+actor "订房人" as Customer
+actor "旅客" as Guest
+actor "前台服务员" as Receptionist
+actor "客房服务员" as Housekeeper
+actor "宾馆经理" as Manager
+actor "系统管理员" as Admin
+
+'=====================
+' Use Case Packages（按四个主要功能模块组织）
+'=====================
+
+package "① 客房信息管理功能" {
+  usecase "UC-009\n查询客房状态" as UC009
+  usecase "UC-012\n更新客房健康状态" as UC012
+  usecase "UC-013\n管理客房信息" as UC013
+}
+
+package "② 客房设备管理功能" {
+  usecase "UC-014\n管理客房设备" as UC014
+}
+
+package "③ 客房预订管理功能" {
+  usecase "UC-001\n浏览宾馆信息" as UC001
+  usecase "UC-002\n注册账户" as UC002
+  usecase "UC-003\n登录系统" as UC003
+  usecase "UC-004\n在线预订客房" as UC004
+  usecase "UC-004A\n前台预订客房" as UC004A
+  usecase "UC-005\n修改预订信息" as UC005
+  usecase "UC-006\n取消预订" as UC006
+  usecase "UC-010\n查询订单信息" as UC010
+}
+
+package "④ 客房业务管理功能" {
+  usecase "UC-007\n办理入住登记" as UC007
+  usecase "UC-007A\n录入旅客信息" as UC007A
+  usecase "UC-008\n办理退房结账" as UC008
+  usecase "UC-008A\n计算住宿费用" as UC008A
+  usecase "UC-011\n客房损坏报修" as UC011
+}
+
+package "⑤ 系统后台管理功能" {
+  usecase "UC-015\n查看业务报表" as UC015
+  usecase "UC-016\n管理用户账户" as UC016
+  usecase "UC-017\n系统配置管理" as UC017
+}
+
+'=====================
+' Actor Relations
+'=====================
+
+' Customer (订房人)
+Customer --> UC001
+Customer --> UC002
+Customer --> UC003
+Customer --> UC004
+Customer --> UC005
+Customer --> UC006
+Customer --> UC010
+
+' Guest (旅客)
+Guest --> UC007
+Guest --> UC008
+' 注意：旅客通过前台服务员办理业务，但旅客作为主要参与者需要关联用例
+
+' Receptionist handles all offline operations
+Receptionist --> UC004A
+Receptionist --> UC005
+Receptionist --> UC006
+Receptionist --> UC007
+Receptionist --> UC008
+Receptionist --> UC009
+Receptionist --> UC010
+Receptionist --> UC011
+
+' Housekeeper
+Housekeeper --> UC012
+
+' Manager
+Manager --> UC013
+Manager --> UC014
+Manager --> UC015
+
+' Admin
+Admin --> UC016
+Admin --> UC017
+
+
+'=====================
+' Include Relations（保持不变）
+'=====================
+UC004 ..> UC003 : <<include>>     '在线预订必须登录
+UC007 ..> UC010 : <<include>>     '入住前查订单
+UC007 ..> UC007A: <<include>>     '录入旅客信息
+UC008 ..> UC010 : <<include>>     '退房前查订单
+UC008 ..> UC008A: <<include>>     '计算费用
+
+UC005 ..> UC010 : <<include>>     '更改订单前查询订单
+UC006 ..> UC010 : <<include>>     '取消订单前查询订单
+
+'=====================
+' Extend
+'=====================
+UC011 ..> UC009 : <<extend>>       '报修基于客房状态
+@enduml

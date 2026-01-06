@@ -1,0 +1,18 @@
+[ {
+  "id" : 1001,
+  "title" : "Review design patterns",
+  "createdAt" : "2025-10-22T16:16:48.2976491",
+  "status" : "DONE",
+  "priority" : "HIGH",
+  "completed" : true
+}, {
+  "id" : 1002,
+  "title" : "Submit lab report",
+  "createdAt" : "2025-10-22T16:16:56.8577428",
+  "status" : "OPEN",
+  "priority" : "MEDIUM",
+  "deadline" : "2025-10-14T23:00:00",
+  "now" : "2025-10-22T16:16:56.8577428",
+  "timeRemaining" : 0,
+  "overdue" : false
+} ]
